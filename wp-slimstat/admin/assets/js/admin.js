@@ -19,7 +19,23 @@ if (typeof SlimStatAdminParams == "undefined") {
 // -----------------------------------------------------------------------------------
 
 jQuery(function () {
-    let licenseType = jQuery("#enable_maxmind");
+    // Show Tracking Request Method only when Tracking Mode = Client
+    function toggleTrackingRequestMethod() {
+        var selector = "input.slimstat-checkbox-toggle#javascript_mode[type=checkbox]";
+        var clientMode = jQuery(selector).prop("checked");
+        var $row = jQuery("#tracking_request_method").closest("tr");
+        if (clientMode) {
+            $row.fadeIn(250);
+        } else {
+            $row.fadeOut(0);
+        }
+    }
+    toggleTrackingRequestMethod();
+    var toggleSelector = "input.slimstat-checkbox-toggle#javascript_mode[type=checkbox]";
+    jQuery(document).on("change", toggleSelector, toggleTrackingRequestMethod);
+    jQuery(document).on("switchChange.bootstrapSwitch", toggleSelector, toggleTrackingRequestMethod);
+
+    var licenseType = jQuery("#enable_maxmind");
     if (licenseType.val() !== "on") {
         jQuery("#maxmind_license_key").closest("tr").css("display", "none");
         jQuery("#maxmind_user_id").closest("tr").css("display", "none");
@@ -30,7 +46,7 @@ jQuery(function () {
     SlimStatAdmin.access_log_count_down();
 
     jQuery("#enable_maxmind").on("change", function (e) {
-        let value = e.target.value;
+        var value = e.target.value;
         if (value == "on") {
             jQuery("#maxmind_user_id").closest("tr").css("display", "table-row");
             jQuery("#maxmind_license_key").closest("tr").css("display", "table-row");
@@ -45,7 +61,7 @@ jQuery(function () {
     jQuery("#slimstat-update-geoip-database").on("click", function (e) {
         e.preventDefault();
 
-        const $geoipUpdateButton = jQuery(this);
+        var $geoipUpdateButton = jQuery(this);
 
         if ($geoipUpdateButton.hasClass("disabled")) {
             return;
@@ -80,7 +96,7 @@ jQuery(function () {
     jQuery("#slimstat-check-geoip-database").on("click", function (e) {
         e.preventDefault();
 
-        const $geoipCheckButton = jQuery(this);
+        var $geoipCheckButton = jQuery(this);
 
         if ($geoipCheckButton.hasClass("disabled")) {
             return;
@@ -507,7 +523,7 @@ var SlimStatAdmin = {
         return function () {
             var inner_content = "#" + id + " .inside";
             var defer = jQuery.Deferred();
-
+            var granularity = jQuery("#" + id + " .slimstat-granularity-select").val();
             jQuery("#" + id + " .inside").html('<p class="loading"><i class="slimstat-font-spin4 animate-spin"></i></p>');
 
             // Clear the autorefresh timer, if set
@@ -520,12 +536,30 @@ var SlimStatAdmin = {
                 security: jQuery("#meta-box-order-nonce").val(),
                 page: SlimStatAdmin.get_current_tab(),
                 report_id: id,
+                granularity: granularity,
             };
 
             // Append the data from the hidden form
             filters_input = jQuery("#slimstat-filters-form .slimstat-post-filter").toArray();
             for (i in filters_input) {
                 data[filters_input[i]["name"]] = filters_input[i]["value"];
+            }
+
+            // If this is the real-time report, remove date filters to get fresh data
+            if (id == "slim_p7_02") {
+                // Remove both prefixed (fs[]) and non-prefixed date filters
+                delete data.hour;
+                delete data.day;
+                delete data.month;
+                delete data.year;
+                delete data.interval;
+                delete data.interval_hours;
+                delete data["fs[hour]"];
+                delete data["fs[day]"];
+                delete data["fs[month]"];
+                delete data["fs[year]"];
+                delete data["fs[interval]"];
+                delete data["fs[interval_hours]"];
             }
 
             jQuery
