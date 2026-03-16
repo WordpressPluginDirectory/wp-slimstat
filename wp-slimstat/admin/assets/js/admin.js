@@ -337,7 +337,7 @@ jQuery(function () {
         } else if (provider === "dbip") {
             $licenseRow.css("display", "none");
             $dbActionsRow.css("display", "table-row");
-        } else if (provider === "cloudflare") {
+        } else if (provider === "cloudflare" || provider === "disable") {
             $licenseRow.css("display", "none");
             $dbActionsRow.css("display", "none");
         }
@@ -1383,6 +1383,7 @@ jQuery(function () {
 // ----- BEGIN: SLIMSTATADMIN HELPER FUNCTIONS ---------------------------------------
 var SlimStatAdmin = {
     refresh_handle: null,
+    _lastManualRefreshTime: 0,
 
     refresh_report: function (id) {
         return function () {
@@ -1393,7 +1394,7 @@ var SlimStatAdmin = {
 
             // Clear the autorefresh timer, if set
             if (SlimStatAdmin.refresh_handle != null) {
-                clearTimeout(SlimStatAdmin.refresh_handle);
+                clearInterval(SlimStatAdmin.refresh_handle);
             }
 
             data = {
@@ -1446,7 +1447,7 @@ var SlimStatAdmin = {
                         });
 
                         if (id == "slim_p7_02") {
-                            SlimStatAdmin._refresh_timer = SlimStatAdminParams.refresh_interval;
+                            SlimStatAdmin._lastManualRefreshTime = Date.now();
                         }
                     }
                 })
@@ -1465,6 +1466,15 @@ var SlimStatAdmin = {
             var now = new Date();
             var currentSeconds = now.getSeconds();
             var currentMinute = now.getMinutes();
+
+            // Check if a manual refresh happened recently (within 2 seconds)
+            var timeSinceManualRefresh = Date.now() - SlimStatAdmin._lastManualRefreshTime;
+            if (timeSinceManualRefresh < 2000) {
+                jQuery(".refresh-timer").html("0:00");
+                // Reset the trigger minute to sync with the wall clock after manual refresh
+                lastTriggerMinute = -1;
+                return;
+            }
 
             // Trigger pulse at exactly :00 of a new minute
             if (currentSeconds === 0 && lastTriggerMinute !== currentMinute) {
@@ -1487,53 +1497,38 @@ var SlimStatAdmin = {
             }
         });
 
-        // Update online visitors count on pulse
+        // Update all admin bar stats + live analytics header on pulse
         window.addEventListener("slimstat:minute_pulse", function () {
             var onlineVisitorsElement = document.getElementById("slimstat-online-visitors-count");
-            var adminbarHeaderElement = document.getElementById("slimstat-adminbar-online-header");
-            var adminbarCountElement = document.getElementById("slimstat-adminbar-online-count");
-
-            // Check if any element exists that needs updating
-            var hasElements = onlineVisitorsElement || adminbarHeaderElement || adminbarCountElement;
+            var hasAdminBar = document.querySelector(".slimstat-adminbar__stats-grid");
             var securityNonce = jQuery("#meta-box-order-nonce").val();
 
-            if (hasElements && securityNonce) {
+            if ((onlineVisitorsElement || hasAdminBar) && securityNonce) {
                 jQuery.ajax({
                     url: ajaxurl,
                     type: "POST",
                     data: {
-                        action: "slimstat_get_online_visitors",
+                        action: "slimstat_get_adminbar_stats",
                         security: securityNonce
                     },
                     success: function (response) {
-                        if (response.success && response.data && response.data.formatted) {
-                            var newValue = response.data.count;
-                            var formattedValue = response.data.formatted;
-
-                            // Helper function to animate value change
-                            var animateElement = function(element) {
-                                if (!element) return;
-
-                                var currentValue = element.textContent.replace(/,/g, "");
-                                if (parseInt(currentValue, 10) !== newValue) {
-                                    element.style.transition = "transform 0.1s ease-out";
-                                    element.style.transform = "scale(1.05)";
-
-                                    setTimeout(function () {
-                                        element.textContent = formattedValue;
-                                        element.style.transform = "scale(1)";
-                                    }, 100);
+                        if (response.success && response.data) {
+                            // Update live analytics page header counter
+                            if (onlineVisitorsElement && response.data.online) {
+                                var formatted = response.data.online.formatted;
+                                if (typeof window.slimstatAnimateElement === "function") {
+                                    window.slimstatAnimateElement(onlineVisitorsElement, formatted);
                                 }
-                            };
+                            }
 
-                            // Update all elements
-                            animateElement(onlineVisitorsElement);
-                            animateElement(adminbarHeaderElement);
-                            animateElement(adminbarCountElement);
+                            // Update admin bar modal via shared function
+                            if (typeof window.slimstatUpdateAdminBar === "function") {
+                                window.slimstatUpdateAdminBar(response.data);
+                            }
                         }
                     },
                     error: function (xhr, status, error) {
-                        console.error("Failed to update online visitors:", error);
+                        console.error("Failed to update admin bar stats:", error);
                     }
                 });
             }
