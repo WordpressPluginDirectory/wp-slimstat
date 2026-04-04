@@ -57,8 +57,7 @@ class Query
      */
     public function __construct()
     {
-        global $wpdb;
-        $this->db = $wpdb;
+        $this->db = \wp_slimstat::$wpdb ?? $GLOBALS['wpdb'];
     }
 
     /**
@@ -376,15 +375,22 @@ class Query
     }
 
     /**
-     * Sets the LIMIT clause for the query.
+     * Sets the LIMIT clause for the query, with an optional OFFSET.
      *
-     * @param int $limit The maximum number of results to return.
+     * @param int $limit  The maximum number of results to return.
+     * @param int $offset The number of rows to skip. Defaults to 0.
      *
      * @return $this
      */
-    public function limit($limit)
+    public function limit($limit, $offset = 0)
     {
-        $this->limitClause = 'LIMIT ' . intval($limit);
+        $limit  = intval($limit);
+        $offset = intval($offset);
+        if ($offset > 0) {
+            $this->limitClause = sprintf('LIMIT %d OFFSET %d', $limit, $offset);
+        } else {
+            $this->limitClause = 'LIMIT ' . $limit;
+        }
         return $this;
     }
 
@@ -1114,9 +1120,21 @@ class Query
      */
     public function getVar()
     {
+        // When caching is enabled and the date range includes today, skip cache
+        // to stay consistent with getAll() which always fetches fresh live data.
+        // Without this, cached scalar values (e.g. $pageviews) become stale while
+        // getAll() returns fresh grouped data, causing percentage calculations >100%.
+        $useCache = $this->allowCaching;
+        if ($useCache) {
+            [$split] = $this->getSplitDateRanges();
+            if ($split) {
+                $useCache = false;
+            }
+        }
+
         $query = $this->buildQuery();
         $query = $this->prepareQuery($query, $this->valuesToPrepare);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $cachedResult = $this->getCachedResultForQuery($query, $this->valuesToPrepare);
             if (false !== $cachedResult) {
                 return $cachedResult;
@@ -1124,7 +1142,7 @@ class Query
         }
 
         $result = $this->db->get_var($query);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $this->setCachedResultForQuery($query, $this->valuesToPrepare, $result, $this->cacheExpiration);
         }
 
@@ -1140,9 +1158,17 @@ class Query
      */
     public function getRow()
     {
+        $useCache = $this->allowCaching;
+        if ($useCache) {
+            [$split] = $this->getSplitDateRanges();
+            if ($split) {
+                $useCache = false;
+            }
+        }
+
         $query = $this->buildQuery();
         $query = $this->prepareQuery($query, $this->valuesToPrepare);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $cachedResult = $this->getCachedResultForQuery($query, $this->valuesToPrepare);
             if (false !== $cachedResult) {
                 return $cachedResult;
@@ -1150,7 +1176,7 @@ class Query
         }
 
         $result = $this->db->get_row($query);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $this->setCachedResultForQuery($query, $this->valuesToPrepare, $result, $this->cacheExpiration);
         }
 
@@ -1166,9 +1192,17 @@ class Query
      */
     public function getCol()
     {
+        $useCache = $this->allowCaching;
+        if ($useCache) {
+            [$split] = $this->getSplitDateRanges();
+            if ($split) {
+                $useCache = false;
+            }
+        }
+
         $query = $this->buildQuery();
         $query = $this->prepareQuery($query, $this->valuesToPrepare);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $cachedResult = $this->getCachedResultForQuery($query, $this->valuesToPrepare);
             if (false !== $cachedResult) {
                 return $cachedResult;
@@ -1176,7 +1210,7 @@ class Query
         }
 
         $result = $this->db->get_col($query);
-        if ($this->allowCaching) {
+        if ($useCache) {
             $this->setCachedResultForQuery($query, $this->valuesToPrepare, $result, $this->cacheExpiration);
         }
 

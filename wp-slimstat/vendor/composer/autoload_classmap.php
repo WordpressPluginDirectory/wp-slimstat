@@ -15,6 +15,7 @@ return array(
     'SlimStat\\Controllers\\Rest\\ConsentChangeRestController' => $baseDir . '/src/Controllers/Rest/ConsentChangeRestController.php',
     'SlimStat\\Controllers\\Rest\\ConsentHealthRestController' => $baseDir . '/src/Controllers/Rest/ConsentHealthRestController.php',
     'SlimStat\\Controllers\\Rest\\GDPRBannerRestController' => $baseDir . '/src/Controllers/Rest/GDPRBannerRestController.php',
+    'SlimStat\\Controllers\\Rest\\TrackerHealthRestController' => $baseDir . '/src/Controllers/Rest/TrackerHealthRestController.php',
     'SlimStat\\Controllers\\Rest\\TrackingRestController' => $baseDir . '/src/Controllers/Rest/TrackingRestController.php',
     'SlimStat\\Decorators\\NotificationDecorator' => $baseDir . '/src/Decorators/NotificationDecorator.php',
     'SlimStat\\Dependencies\\BrowscapPHP\\Browscap' => $baseDir . '/src/Dependencies/BrowscapPHP/Browscap.php',

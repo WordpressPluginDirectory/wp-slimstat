@@ -5,7 +5,7 @@ Text Domain: wp-slimstat
 Requires at least: 5.6
 Requires PHP: 7.4
 Tested up to: 6.9.4
-Stable tag: 5.4.5
+Stable tag: 5.4.9
 License: GPL-2.0+
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -75,6 +75,67 @@ An extensive knowledge base is available on our [website](https://www.wp-slimsta
 9. **Settings** - Plenty of options to customize the plugin's behavior
 
 == Changelog ==
+= 5.4.9 - 2026-04-03 =
+* Fix: Scoped sortable handler to Slimstat Customize page only — prevents corrupting WordPress Dashboard widget layout
+* Fix: Use sanitized URI in dashboard widget enqueue condition for consistency
+
+= 5.4.8 - 2026-03-31 =
+
+This release fixes remaining tracking issues from the 5.4.x upgrade cycle. If you upgraded from 5.3.x through 5.4.0-5.4.6, this update restores session cookies and client-side tracking automatically.
+
+* Fix: Session cookies now restored for all upgrade paths, not just GDPR-disabled sites
+* Fix: Client-side (JavaScript) tracking restored unconditionally — fixes zero tracking on cached sites
+* Fix: Migration forced-resets gated to run once, preserving admin choices on future updates
+* Fix: FingerprintJS v4 now generates fingerprints correctly — `.get()` call was missing since v3→v4 migration
+* Fix: JS consent check now mirrors PHP logic when SlimStat banner is off
+* Fix: Charts and reports now query the correct database for External DB addon users
+* Fix: Real-time analytics queries use the correct database connection for External DB
+* Fix: Complex report queries (e.g. Recent Events) now work with External DB addon
+* Fix: Filter dropdown autocomplete now queries the correct database for External DB
+* Fix: Visit counter seeds correctly from external database for Pro addon users
+* Fix: Country percentages exceeding 100% in Audience Location map — query cache now stays fresh for live date ranges
+* Fix: Filter removal via red cross button not working
+* Fix: Outbound Link, Notes, and Category filter dropdowns now show individual values instead of raw concatenated strings
+* Fix: Filter 'equals' operator now works on Outbound Link, Notes, and Category columns
+* Fix: Chart granularity selection (Daily/Weekly/Monthly) persists across page reloads
+* Fix: Chart granularity now syncs across all charts on the same page
+* Fix: Chart timezone offset corrected for non-UTC servers
+* Fix: Browscap Library now initializes WordPress filesystem before extraction (resolves toggle revert)
+* Fix: Browscap errors now show specific failure details instead of generic messages
+* Fix: Downloaded Browscap files validated as ZIP before extraction
+* Fix: Browscap download compatible with hosts that block GitHub redirects
+* Improvement: Chart granularity persisted via localStorage for cross-session consistency
+* Improvement: sessionStorage access wrapped in try/catch for private browsing compatibility
+
+= 5.4.6 - 2026-03-23 =
+
+We heard you — upgrading to 5.4.x broke tracking for many of you. Visitor counts dropped to zero, IPs were masked without your permission, and a consent banner appeared on sites that never asked for one. This release fixes all of that. After updating, your site works the way it did before 5.4.0 — no manual steps required.
+
+If you want to enable GDPR features:
+
+* Consent banner: Settings → Tracker → Data Protection → GDPR Compliance Mode = On, then Settings → Tracker → Consent Management → choose SlimStat Banner, WP Consent API, or Real Cookie Banner
+* Anonymize IPs: Settings → Tracker → Data Protection → Anonymize IP Addresses = On
+* Hash IPs: Settings → Tracker → Data Protection → Hash IP Addresses = On
+
+**Fixed**
+
+* Visitor counts dropping to zero after upgrading: a consent banner was silently enabled on every site, blocking all anonymous visitors. The banner is now off by default. If you had configured opt-in or opt-out privacy features in an earlier version, we detect that and keep consent enabled for you automatically.
+* IPs being masked or hashed without your permission: v5.4.0 changed IP storage defaults, so full IP addresses were replaced with anonymized or hashed values. Your IPs are now stored in full again, matching pre-5.4 behavior.
+* Tracking broken on sites using WP Rocket, W3TC, or other caching plugins: fresh installs defaulted to server-side tracking, which doesn't work with page caching. We've restored browser-based (JavaScript) tracking as the default.
+* Ad-blocker bypass failing after plugin updates: the bypass URL included the plugin version, so cached pages had a stale URL after every update. The bypass URL is now stable across versions.
+* Internal tracking URLs and bypass file URLs appearing as pages in the Access Log. All SlimStat-internal URLs are now filtered from both reports and server-side tracking.
+* Access Log pagination showing the same rows when clicking the next-page arrow. The second page now correctly shows the next set of results.
+* Pageviews silently lost when a transport fails: the tracker now tries adblock-bypass, AJAX, and REST fallbacks before giving up.
+* Stale cached tracker data causing abandoned pageviews: the tracker recovers gracefully.
+* "Respect Do Not Track" setting only working when GDPR mode was on: DNT is now honored regardless of your GDPR setting. The DNT toggle is now always visible in settings.
+* Migration admin notice linking to a non-existent settings page. The link now correctly opens Settings → Tracker → Data Protection.
+
+**Improved**
+
+* Tracker health diagnostics now distinguish between fatal errors and recoverable warnings.
+* Session cookies are restored by default — returning visitors are recognized across pages again, just like in v5.3.x.
+* Cookie info registered with WP Consent API now uses proper plural-aware translations.
+
 = 5.4.5 - 2026-03-20 =
 - **Fix**: Hardened user exclusion logic — fixed consent-upgrade path, capability key matching, and defensive `wp_get_current_user()` calls (#246)
 - **Fix**: GDPR consent cookie domain, cached page banner display, and anonymous nonce handling
